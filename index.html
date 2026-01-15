@@ -14,17 +14,25 @@
         .btn-google { background: #4285F4; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
         header { background-color: #ee4d2d; color: white; padding: 15px; text-align: center; }
         .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; max-width: 600px; margin: auto; }
-        .product-card { background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; }
-        .product-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+        .product-card { background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; transition: 0.2s; }
+        .product-card:active { transform: scale(0.98); }
+        .product-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; background-color: #eee; }
         .product-info { padding: 8px; }
-        .product-title { font-size: 12px; height: 32px; overflow: hidden; color: #333; margin-bottom: 5px; line-height: 16px; }
+        .product-title { font-size: 12px; height: 32px; overflow: hidden; color: #333; margin-bottom: 5px; line-height: 16px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
         .price { color: #ee4d2d; font-size: 16px; font-weight: bold; }
-        #admin-panel { display: none; background: #333; color: white; padding: 20px; max-width: 500px; margin: 15px auto; border-radius: 8px; }
-        #admin-panel input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; border-radius: 4px; border: none; }
+        
+        /* Painel Administrativo */
+        #admin-panel { display: none; background: #333; color: white; padding: 20px; max-width: 500px; margin: 15px auto; border-radius: 8px; box-sizing: border-box; }
+        #admin-panel h3 { margin-top: 0; color: #00bfa5; }
+        #admin-panel input { width: 100%; padding: 12px; margin: 8px 0; box-sizing: border-box; border-radius: 4px; border: 1px solid #444; background: #222; color: #fff; }
+        .btn-postar { width: 100%; padding: 12px; background: #00bfa5; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+
+        /* Loader */
         #loader-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; flex-direction: column; align-items: center; justify-content: center; }
         .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        footer { text-align: center; padding: 20px; font-size: 12px; color: #888; }
+        
+        footer { text-align: center; padding: 30px; font-size: 12px; color: #888; border-top: 1px solid #ddd; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -32,7 +40,7 @@
     <div id="loader-container">
         <div class="spinner"></div>
         <h2 style="color:#ee4d2d; margin-top:20px;">Aplicando Desconto...</h2>
-        <p style="color:#666; font-size:14px;">Redirecionando para loja parceira oficial.</p>
+        <p style="color:#666; font-size:14px;">Você está sendo redirecionado com segurança.</p>
     </div>
 
     <div class="top-bar">
@@ -40,7 +48,7 @@
         <div id="user-profile" style="display:none; align-items:center; gap:8px;">
             <img id="u-photo" style="width:30px; border-radius:50%;">
             <span id="u-name" style="font-size:12px; font-weight:bold;"></span>
-            <button onclick="logout()" style="border:none; background:none; color:red; font-size:11px;">Sair</button>
+            <button onclick="logout()" style="border:none; background:none; color:red; font-size:11px; cursor:pointer;">Sair</button>
         </div>
     </div>
 
@@ -52,18 +60,18 @@
         <input type="text" id="p-preco" placeholder="Preço (ex: 49,90)">
         <input type="text" id="p-img" placeholder="URL da Imagem">
         <input type="text" id="p-link" placeholder="Link de Afiliado">
-        <button onclick="salvarProduto()" style="width:100%; padding:10px; background:#00bfa5; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">POSTAR PRODUTO</button>
+        <button onclick="salvarProduto()" class="btn-postar">POSTAR PRODUTO AGORA</button>
     </div>
 
-    <div class="grid-container" id="vitrine"></div>
+    <div class="grid-container" id="vitrine">
+        </div>
 
     <footer>
         <span onclick="alert('Independente. Afiliado das principais lojas do Brasil.')">Termos</span> | 
-        <span onclick="alert('Seus dados são protegidos pelo Google.')">Privacidade</span>
+        <span onclick="alert('Seus dados são protegidos pela segurança do Google.')">Privacidade</span>
     </footer>
 
     <script>
-        // CONFIGURAÇÃO DO WALLY
         const firebaseConfig = {
           apiKey: "AIzaSyCedznZfgv43RRWJmyvA105xFrRhpNTDEw",
           authDomain: "achadinho-no-precinho.firebaseapp.com",
@@ -78,7 +86,9 @@
         const auth = firebase.auth();
         const db = firebase.database();
         const provider = new firebase.auth.GoogleAuthProvider();
-        const eMailDono = "wallyazevedo18@gmail.com";
+        
+        const MEU_UID = "PwnZYwD4DacE2dcHwBBN3Iuvngf1";
+        const MEU_EMAIL = "wallyazevedo18@gmail.com";
         let logado = false;
 
         document.getElementById('login-btn').onclick = () => auth.signInWithPopup(provider);
@@ -91,7 +101,11 @@
                 document.getElementById('user-profile').style.display = 'flex';
                 document.getElementById('u-photo').src = user.photoURL;
                 document.getElementById('u-name').innerText = user.displayName.split(' ')[0];
-                if(user.email.toLowerCase() === eMailDono) document.getElementById('admin-panel').style.display = 'block';
+                
+                // Validação de Segurança do Patrão
+                if(user.email.toLowerCase() === MEU_EMAIL && user.uid === MEU_UID) {
+                    document.getElementById('admin-panel').style.display = 'block';
+                }
             }
         });
 
@@ -100,10 +114,14 @@
             const preco = document.getElementById('p-preco').value;
             const img = document.getElementById('p-img').value;
             const link = document.getElementById('p-link').value;
+            
             if(nome && preco && img && link) {
-                db.ref('produtos').push({ nome, preco, img, link });
-                document.querySelectorAll('#admin-panel input').forEach(i => i.value = '');
-                alert("Produto postado com sucesso!");
+                db.ref('produtos').push({ nome, preco, img, link }).then(() => {
+                    alert("Produto postado com sucesso!");
+                    document.querySelectorAll('#admin-panel input').forEach(i => i.value = '');
+                }).catch(e => alert("Erro: Verifique as regras do seu Database."));
+            } else {
+                alert("Preencha todos os campos!");
             }
         }
 
@@ -129,7 +147,7 @@
                 document.getElementById('loader-container').style.display = 'flex';
                 setTimeout(() => { window.location.href = link; }, 2000);
             } else {
-                alert("Por favor, entre com sua conta Google no topo para ver os descontos!");
+                alert("Por favor, entre com sua conta Google no topo para liberar o desconto oficial!");
             }
         }
     </script>
