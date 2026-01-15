@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wally - Achadinho no Precinho</title>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, sans-serif; background-color: #f5f5f5; margin: 0; padding: 0; }
+        .top-bar { background: #fff; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
+        .btn-google { background: #4285F4; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        header { background-color: #ee4d2d; color: white; padding: 15px; text-align: center; }
+        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px; max-width: 600px; margin: auto; }
+        .product-card { background: white; border-radius: 4px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.1); cursor: pointer; }
+        .product-img { width: 100%; aspect-ratio: 1/1; object-fit: cover; }
+        .product-info { padding: 8px; }
+        .product-title { font-size: 12px; height: 32px; overflow: hidden; color: #333; margin-bottom: 5px; line-height: 16px; }
+        .price { color: #ee4d2d; font-size: 16px; font-weight: bold; }
+        #admin-panel { display: none; background: #333; color: white; padding: 20px; max-width: 500px; margin: 15px auto; border-radius: 8px; }
+        #admin-panel input { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; border-radius: 4px; border: none; }
+        #loader-container { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 10000; flex-direction: column; align-items: center; justify-content: center; }
+        .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #ee4d2d; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        footer { text-align: center; padding: 20px; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+
+    <div id="loader-container">
+        <div class="spinner"></div>
+        <h2 style="color:#ee4d2d; margin-top:20px;">Aplicando Desconto...</h2>
+        <p style="color:#666; font-size:14px;">Redirecionando para loja parceira oficial.</p>
+    </div>
+
+    <div class="top-bar">
+        <div id="auth-status"><button class="btn-google" id="login-btn">Entrar com Google</button></div>
+        <div id="user-profile" style="display:none; align-items:center; gap:8px;">
+            <img id="u-photo" style="width:30px; border-radius:50%;">
+            <span id="u-name" style="font-size:12px; font-weight:bold;"></span>
+            <button onclick="logout()" style="border:none; background:none; color:red; font-size:11px;">Sair</button>
+        </div>
+    </div>
+
+    <header><h1>ACHADINHO NO PRECINHO 🧡</h1></header>
+
+    <div id="admin-panel">
+        <h3>🛠 Painel do Patrão (Wally)</h3>
+        <input type="text" id="p-nome" placeholder="Nome do Produto">
+        <input type="text" id="p-preco" placeholder="Preço (ex: 49,90)">
+        <input type="text" id="p-img" placeholder="URL da Imagem">
+        <input type="text" id="p-link" placeholder="Link de Afiliado">
+        <button onclick="salvarProduto()" style="width:100%; padding:10px; background:#00bfa5; color:white; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">POSTAR PRODUTO</button>
+    </div>
+
+    <div class="grid-container" id="vitrine"></div>
+
+    <footer>
+        <span onclick="alert('Independente. Afiliado das principais lojas do Brasil.')">Termos</span> | 
+        <span onclick="alert('Seus dados são protegidos pelo Google.')">Privacidade</span>
+    </footer>
+
+    <script>
+        // CONFIGURAÇÃO DO WALLY
+        const firebaseConfig = {
+          apiKey: "AIzaSyCedznZfgv43RRWJmyvA105xFrRhpNTDEw",
+          authDomain: "achadinho-no-precinho.firebaseapp.com",
+          databaseURL: "https://achadinho-no-precinho-default-rtdb.firebaseio.com",
+          projectId: "achadinho-no-precinho",
+          storageBucket: "achadinho-no-precinho.firebasestorage.app",
+          messagingSenderId: "626481618160",
+          appId: "1:626481618160:web:6971d5560c36a47ccd3635"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        const provider = new firebase.auth.GoogleAuthProvider();
+        const eMailDono = "wallyazevedo18@gmail.com";
+        let logado = false;
+
+        document.getElementById('login-btn').onclick = () => auth.signInWithPopup(provider);
+        function logout() { auth.signOut().then(() => window.location.reload()); }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                logado = true;
+                document.getElementById('auth-status').style.display = 'none';
+                document.getElementById('user-profile').style.display = 'flex';
+                document.getElementById('u-photo').src = user.photoURL;
+                document.getElementById('u-name').innerText = user.displayName.split(' ')[0];
+                if(user.email.toLowerCase() === eMailDono) document.getElementById('admin-panel').style.display = 'block';
+            }
+        });
+
+        function salvarProduto() {
+            const nome = document.getElementById('p-nome').value;
+            const preco = document.getElementById('p-preco').value;
+            const img = document.getElementById('p-img').value;
+            const link = document.getElementById('p-link').value;
+            if(nome && preco && img && link) {
+                db.ref('produtos').push({ nome, preco, img, link });
+                document.querySelectorAll('#admin-panel input').forEach(i => i.value = '');
+                alert("Produto postado com sucesso!");
+            }
+        }
+
+        db.ref('produtos').on('value', snapshot => {
+            const vitrine = document.getElementById('vitrine');
+            vitrine.innerHTML = "";
+            snapshot.forEach(item => {
+                const p = item.val();
+                vitrine.innerHTML += `
+                    <div class="product-card" onclick="irParaLink('${p.link}')">
+                        <img src="${p.img}" class="product-img">
+                        <div class="product-info">
+                            <div class="product-title">${p.nome}</div>
+                            <div class="price">R$ ${p.preco}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        });
+
+        function irParaLink(link) {
+            if(logado) {
+                document.getElementById('loader-container').style.display = 'flex';
+                setTimeout(() => { window.location.href = link; }, 2000);
+            } else {
+                alert("Por favor, entre com sua conta Google no topo para ver os descontos!");
+            }
+        }
+    </script>
+</body>
+</html>
